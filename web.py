@@ -27,7 +27,7 @@ UNITS = {"ALP": "same unit as training data", "Operative time": "same unit as tr
 
 
 DEFAULT_INPUTS = {'Age>50': 1.0, 'Gallbladder size(0=Normal, 1=Enlarged)': 0.0, 'Gallbladder wall thickening(0=<5mm, 1=≥5mm)': 0.0, 'Blood Type A': 0.0, 'ALP': 76.0, 'Hyperlipidemia': 0.0, 'Hypocalcemia': 0.0, 'Operative time': 50.0, 'Fasting time(0=<12h, 1=≥12h)': 0.0}
-MODEL_SHA256 = '9b9db485f438f97b61c0de6361a407a9581a846801207892f8b5c56947b7c854'
+MODEL_SHA256 = '484b044873d1a4c48b2863e4c5a546a246d5035b00b4656bd9049013b6b08bf0'
 
 def validate_features(df):
     missing = set(FEATURES) - set(df.columns)
@@ -57,6 +57,10 @@ def load_model(model_mtime):
         raise ValueError("The model file does not match this deployment.")
     if list(model.feature_names_in_) != FEATURES:
         raise ValueError("Model feature order does not match this application.")
+    # The source CSV uses status=0 for PONV, per the corrected event definition.
+    # Training recodes the outcome, so model class 1 is PONV; predictors are not recoded.
+    if getattr(model, "outcome_definition_", {}).get("source_positive_value") != 0:
+        raise ValueError("This model does not use the corrected PONV outcome definition.")
     if list(model.classes_) != [0, 1]:
         raise ValueError("Unexpected model classes.")
     return model
